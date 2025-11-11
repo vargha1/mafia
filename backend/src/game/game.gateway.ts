@@ -301,23 +301,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async handleMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { gameId: string; message: string; username: string },
+    @MessageBody() data: SendMessageDto,
   ) {
     try {
       const userId = this.validateAuthentication(client);
       this.validateGameMembership(client, data.gameId);
 
-      // Validate and sanitize message
-      if (!data.message || typeof data.message !== 'string') {
-        throw new BadRequestException('Message is required');
-      }
-
-      if (!data.username || typeof data.username !== 'string') {
-        throw new BadRequestException('Username is required');
-      }
-
+      // Sanitize message (basic validation already done by DTO)
       const sanitizedMessage = this.sanitizeMessage(data.message);
-      const sanitizedUsername = this.sanitizeMessage(data.username).substring(0, 50);
+      const sanitizedUsername = this.sanitizeMessage(data.username);
 
       this.server.to(data.gameId).emit('newMessage', {
         userId,
