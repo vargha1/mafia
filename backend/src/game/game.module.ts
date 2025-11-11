@@ -7,11 +7,15 @@ import { Game } from './entities/game.entity';
 import { GamePlayer } from './entities/game-player.entity';
 import { GameHistory } from './entities/game-history.entity';
 import { UserModule } from '../user/user.module';
+import { AuthModule } from '../auth/auth.module';
+import { AuthService } from '../auth/auth.service';
+import { User } from '../user/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Game, GamePlayer, GameHistory]),
+    TypeOrmModule.forFeature([Game, GamePlayer, GameHistory, User]),
     UserModule,
+    AuthModule,
   ],
   controllers: [GameController],
   providers: [GameService, GameGateway],

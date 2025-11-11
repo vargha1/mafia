@@ -16,14 +16,17 @@ const game_entity_1 = require("./entities/game.entity");
 const game_player_entity_1 = require("./entities/game-player.entity");
 const game_history_entity_1 = require("./entities/game-history.entity");
 const user_module_1 = require("../user/user.module");
+const auth_module_1 = require("../auth/auth.module");
+const user_entity_1 = require("../user/entities/user.entity");
 let GameModule = class GameModule {
 };
 exports.GameModule = GameModule;
 exports.GameModule = GameModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([game_entity_1.Game, game_player_entity_1.GamePlayer, game_history_entity_1.GameHistory]),
+            typeorm_1.TypeOrmModule.forFeature([game_entity_1.Game, game_player_entity_1.GamePlayer, game_history_entity_1.GameHistory, user_entity_1.User]),
             user_module_1.UserModule,
+            auth_module_1.AuthModule,
         ],
         controllers: [game_controller_1.GameController],
         providers: [game_service_1.GameService, game_gateway_1.GameGateway],
