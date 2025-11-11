@@ -38,48 +38,78 @@ export class AuthService implements OnModuleInit {
   async register(registerDto: RegisterDto) {
     const { username, email, password } = registerDto;
 
-    // Password complexity validation
-    if (!this.validatePasswordComplexity(password)) {
-      throw new ConflictException('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character');
+    try {
+      // Password complexity validation
+      if (!this.validatePasswordComplexity(password)) {
+        throw new ConflictException('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character');
+      }
+
+      // Check if user already exists
+      const existingUser = await this.userRepository.findOne({
+        where: [{ username }, { email }],
+      });
+
+      if (existingUser) {
+        throw new ConflictException('Username or email already exists');
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Create user
+      const user = this.userRepository.create({
+        username,
+        email,
+        password: hashedPassword,
+        failed_login_attempts: 0,
+        is_active: true,
+      });
+
+      await this.userRepository.save(user);
+
+      // Generate JWT token
+      const payload = { sub: user.id, username: user.username };
+      const token = this.jwtService.sign(payload);
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          level: user.level,
+          xp: user.xp,
+        },
+        token,
+      };
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        const errorMessage = (error as any).message;
+
+        // Check for specific database errors
+        if (errorMessage.includes('does not exist') || errorMessage.includes('relation')) {
+          this.logger.error('Database tables do not exist:', error);
+          throw new InternalServerErrorException('Database initialization required. Please try again in a moment.');
+        }
+
+        if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
+          throw new ConflictException('Username or email already exists');
+        }
+
+        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+          this.logger.error('Database connection error:', error);
+          throw new InternalServerErrorException('Database service temporarily unavailable. Please try again later.');
+        }
+      }
+
+      // Re-throw known exceptions
+      if (error instanceof ConflictException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
+      // Handle unexpected errors
+      this.logger.error('Unexpected error during registration:', error);
+      throw new InternalServerErrorException('An unexpected error occurred during registration');
     }
-
-    // Check if user already exists
-    const existingUser = await this.userRepository.findOne({
-      where: [{ username }, { email }],
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Username or email already exists');
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create user
-    const user = this.userRepository.create({
-      username,
-      email,
-      password: hashedPassword,
-      failed_login_attempts: 0,
-      is_active: true,
-    });
-
-    await this.userRepository.save(user);
-
-    // Generate JWT token
-    const payload = { sub: user.id, username: user.username };
-    const token = this.jwtService.sign(payload);
-
-    return {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        level: user.level,
-        xp: user.xp,
-      },
-      token,
-    };
   }
 
   async login(loginDto: LoginDto) {
