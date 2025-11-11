@@ -67,6 +67,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], GamePlayer.prototype, "is_ready", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], GamePlayer.prototype, "has_voted", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], GamePlayer.prototype, "joined_at", void 0);

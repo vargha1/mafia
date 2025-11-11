@@ -36,19 +36,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
+const security_middleware_1 = require("./middleware/security.middleware");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         cors: true,
     });
+    const securityMiddleware = app.get(security_middleware_1.SecurityMiddleware);
+    const botDetectionMiddleware = app.get(security_middleware_1.BotDetectionMiddleware);
+    const ipValidationMiddleware = app.get(security_middleware_1.IPValidationMiddleware);
+    app.use(securityMiddleware.use.bind(securityMiddleware));
+    app.use(botDetectionMiddleware.use.bind(botDetectionMiddleware));
+    app.use(ipValidationMiddleware.use.bind(ipValidationMiddleware));
     app.enableCors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
+        forbidNonWhitelisted: true,
         transform: true,
+        transformOptions: {
+            enableImplicitConversion: true,
+        },
     }));
     app.setGlobalPrefix('api');
     const port = process.env.PORT || 8001;

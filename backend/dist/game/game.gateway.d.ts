@@ -1,23 +1,39 @@
 import { OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './services/game.service';
+import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
+import { User } from '../user/entities/user.entity';
+import { AuthenticateDto, JoinRoomDto, StartGameDto, SendMessageDto, EliminatePlayerDto, NextPhaseDto } from './dto/websocket.dto';
 interface AuthenticatedSocket extends Socket {
     userId?: string;
     gameId?: string;
 }
 export declare class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private gameService;
+    private jwtService;
+    private userRepository;
     server: Server;
+    private readonly logger;
     private connectedUsers;
-    constructor(gameService: GameService);
+    private userSockets;
+    private connectionAttempts;
+    constructor(gameService: GameService, jwtService: JwtService, userRepository: Repository<User>);
     handleConnection(client: AuthenticatedSocket): void;
     handleDisconnect(client: AuthenticatedSocket): Promise<void>;
-    handleAuthenticate(client: AuthenticatedSocket, data: {
-        userId: string;
-    }): void;
-    handleJoinRoom(client: AuthenticatedSocket, data: {
-        gameId: string;
-    }): Promise<{
+    private validateAuthentication;
+    private validateGameMembership;
+    private sanitizeMessage;
+    handleAuthenticate(client: AuthenticatedSocket, data: AuthenticateDto): Promise<{
+        success: boolean;
+        user: {
+            id: string;
+            username: string;
+            level: number;
+            xp: number;
+        };
+    }>;
+    handleJoinRoom(client: AuthenticatedSocket, data: JoinRoomDto): Promise<{
         success: boolean;
         game: import("./entities/game.entity").Game;
         error?: undefined;
@@ -46,9 +62,7 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
         error: any;
         isReady?: undefined;
     }>;
-    handleStartGame(client: AuthenticatedSocket, data: {
-        gameId: string;
-    }): Promise<{
+    handleStartGame(client: AuthenticatedSocket, data: StartGameDto): Promise<{
         success: boolean;
         game: import("./entities/game.entity").Game;
         error?: undefined;
@@ -57,12 +71,12 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
         error: any;
         game?: undefined;
     }>;
-    handleMessage(client: AuthenticatedSocket, data: {
-        gameId: string;
-        message: string;
-        username: string;
-    }): Promise<{
+    handleMessage(client: AuthenticatedSocket, data: SendMessageDto): Promise<{
         success: boolean;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
     }>;
     handleVote(client: AuthenticatedSocket, data: {
         gameId: string;
@@ -74,10 +88,7 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
         success: boolean;
         error: any;
     }>;
-    handleEliminate(client: AuthenticatedSocket, data: {
-        gameId: string;
-        playerId: string;
-    }): Promise<{
+    handleEliminate(client: AuthenticatedSocket, data: EliminatePlayerDto): Promise<{
         success: boolean;
         result: {
             winner: string;
@@ -89,9 +100,7 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
         error: any;
         result?: undefined;
     }>;
-    handleNextPhase(client: AuthenticatedSocket, data: {
-        gameId: string;
-    }): Promise<{
+    handleNextPhase(client: AuthenticatedSocket, data: NextPhaseDto): Promise<{
         success: boolean;
         game: import("./entities/game.entity").Game;
         error?: undefined;
@@ -104,16 +113,34 @@ export declare class GameGateway implements OnGatewayConnection, OnGatewayDiscon
         gameId: string;
         offer: any;
         targetUserId: string;
-    }): void;
+    }): Promise<{
+        success: boolean;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+    }>;
     handleWebRTCAnswer(client: AuthenticatedSocket, data: {
         gameId: string;
         answer: any;
         targetUserId: string;
-    }): void;
+    }): Promise<{
+        success: boolean;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+    }>;
     handleWebRTCIceCandidate(client: AuthenticatedSocket, data: {
         gameId: string;
         candidate: any;
         targetUserId: string;
-    }): void;
+    }): Promise<{
+        success: boolean;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+    }>;
 }
 export {};

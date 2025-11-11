@@ -59,17 +59,22 @@ let AuthService = class AuthService {
     }
     async register(registerDto) {
         const { username, email, password } = registerDto;
+        if (!this.validatePasswordComplexity(password)) {
+            throw new common_1.ConflictException('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character');
+        }
         const existingUser = await this.userRepository.findOne({
             where: [{ username }, { email }],
         });
         if (existingUser) {
             throw new common_1.ConflictException('Username or email already exists');
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
         const user = this.userRepository.create({
             username,
             email,
             password: hashedPassword,
+            failed_login_attempts: 0,
+            is_active: true,
         });
         await this.userRepository.save(user);
         const payload = { sub: user.id, username: user.username };
@@ -91,25 +96,57 @@ let AuthService = class AuthService {
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
+        if (user.locked_until && user.locked_until > new Date()) {
+            const remainingTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
+            throw new common_1.UnauthorizedException(`Account locked. Try again in ${remainingTime} minutes.`);
+        }
+        if (!user.is_active) {
+            throw new common_1.UnauthorizedException('Account is deactivated');
+        }
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            const updatedAttempts = (user.failed_login_attempts || 0) + 1;
+            const maxAttempts = 5;
+            if (updatedAttempts >= maxAttempts) {
+                const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+                await this.userRepository.update(user.id, {
+                    failed_login_attempts: updatedAttempts,
+                    locked_until: lockUntil,
+                });
+                throw new common_1.UnauthorizedException(`Too many failed attempts. Account locked for 15 minutes.`);
+            }
+            else {
+                await this.userRepository.update(user.id, {
+                    failed_login_attempts: updatedAttempts,
+                });
+                const remainingAttempts = maxAttempts - updatedAttempts;
+                throw new common_1.UnauthorizedException(`Invalid credentials. ${remainingAttempts} attempts remaining.`);
+            }
         }
-        const payload = { sub: user.id, username: user.username };
+        await this.userRepository.update(user.id, {
+            failed_login_attempts: 0,
+            locked_until: null,
+        });
+        const updatedUser = await this.userRepository.findOne({ where: { username } });
+        const payload = { sub: user.id, username: user.username, email: user.email };
         const token = this.jwtService.sign(payload);
         return {
             user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                level: user.level,
-                xp: user.xp,
-                total_games: user.total_games,
-                wins: user.wins,
-                losses: user.losses,
+                id: updatedUser.id,
+                username: updatedUser.username,
+                email: updatedUser.email,
+                level: updatedUser.level,
+                xp: updatedUser.xp,
+                total_games: updatedUser.total_games,
+                wins: updatedUser.wins,
+                losses: updatedUser.losses,
             },
             token,
         };
+    }
+    validatePasswordComplexity(password) {
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        return passwordRegex.test(password);
     }
 };
 exports.AuthService = AuthService;

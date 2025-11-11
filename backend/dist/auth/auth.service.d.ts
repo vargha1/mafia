@@ -30,4 +30,5 @@ export declare class AuthService {
         };
         token: string;
     }>;
+    private validatePasswordComplexity;
 }

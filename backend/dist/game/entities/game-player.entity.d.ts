@@ -17,5 +17,6 @@ export declare class GamePlayer {
     is_alive: boolean;
     votes_received: number;
     is_ready: boolean;
+    has_voted: boolean;
     joined_at: Date;
 }

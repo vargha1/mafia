@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var JwtStrategy_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JwtStrategy = void 0;
 const common_1 = require("@nestjs/common");
@@ -19,27 +20,46 @@ const passport_jwt_1 = require("passport-jwt");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../../user/entities/user.entity");
-let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
+let JwtStrategy = JwtStrategy_1 = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(userRepository) {
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            throw new Error('JWT_SECRET environment variable is required for security');
+        }
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: process.env.JWT_SECRET || 'your-super-secret-jwt-key',
+            secretOrKey: jwtSecret,
         });
         this.userRepository = userRepository;
+        this.logger = new common_1.Logger(JwtStrategy_1.name);
     }
     async validate(payload) {
+        const now = Date.now() / 1000;
+        if (payload.exp && payload.exp < now) {
+            this.logger.warn(`Token expired for user ${payload.sub}`);
+            throw new common_1.UnauthorizedException('Token has expired');
+        }
+        if (!payload.sub || !payload.email) {
+            this.logger.warn('Invalid token payload structure');
+            throw new common_1.UnauthorizedException('Invalid token structure');
+        }
         const user = await this.userRepository.findOne({
             where: { id: payload.sub },
         });
         if (!user) {
-            throw new common_1.UnauthorizedException();
+            this.logger.warn(`User not found for token payload: ${payload.sub}`);
+            throw new common_1.UnauthorizedException('User not found');
+        }
+        if (user.isActive === false) {
+            this.logger.warn(`Inactive user attempted access: ${user.id}`);
+            throw new common_1.UnauthorizedException('Account is deactivated');
         }
         return user;
     }
 };
 exports.JwtStrategy = JwtStrategy;
-exports.JwtStrategy = JwtStrategy = __decorate([
+exports.JwtStrategy = JwtStrategy = JwtStrategy_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository])

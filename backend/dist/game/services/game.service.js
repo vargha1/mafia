@@ -185,24 +185,70 @@ let GameService = class GameService {
         }
     }
     async vote(gameId, voterId, targetId) {
-        const game = await this.getGame(gameId);
-        if (game.phase !== game_entity_1.GamePhase.VOTING) {
-            throw new common_1.BadRequestException('Not in voting phase');
+        const queryRunner = this.gamePlayerRepository.manager.connection.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        try {
+            const game = await queryRunner.manager.findOne(game_entity_1.Game, {
+                where: { id: gameId },
+                relations: ['players'],
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!game) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.NotFoundException('Game not found');
+            }
+            if (game.phase !== game_entity_1.GamePhase.VOTING) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.BadRequestException('Not in voting phase');
+            }
+            const target = await queryRunner.manager.findOne(game_player_entity_1.GamePlayer, {
+                where: { id: targetId, game_id: gameId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!target) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.NotFoundException('Target player not found');
+            }
+            const voter = game.players.find(p => p.user_id === voterId);
+            if (!voter) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.NotFoundException('Voter not found in game');
+            }
+            if (!voter.is_alive) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.BadRequestException('Dead players cannot vote');
+            }
+            if (!target.is_alive) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.BadRequestException('Cannot vote for dead player');
+            }
+            if (voter.has_voted) {
+                await queryRunner.rollbackTransaction();
+                throw new common_1.BadRequestException('Player has already voted');
+            }
+            target.votes_received = (target.votes_received || 0) + 1;
+            const updatedTarget = await queryRunner.manager.save(target);
+            voter.has_voted = true;
+            await queryRunner.manager.save(voter);
+            const voteHistory = queryRunner.manager.create(game_history_entity_1.GameHistory, {
+                user_id: voterId,
+                game_id: gameId,
+                action: 'vote',
+                target_user_id: target.user_id,
+                created_at: new Date(),
+            });
+            await queryRunner.manager.save(voteHistory);
+            await queryRunner.commitTransaction();
+            return updatedTarget;
         }
-        const voter = game.players.find(p => p.user_id === voterId);
-        const target = game.players.find(p => p.id === targetId);
-        if (!voter || !target) {
-            throw new common_1.NotFoundException('Player not found');
+        catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
         }
-        if (!voter.is_alive) {
-            throw new common_1.BadRequestException('Dead players cannot vote');
+        finally {
+            await queryRunner.release();
         }
-        if (!target.is_alive) {
-            throw new common_1.BadRequestException('Cannot vote for dead player');
-        }
-        target.votes_received += 1;
-        await this.gamePlayerRepository.save(target);
-        return target;
     }
     async eliminatePlayer(gameId, playerId) {
         const player = await this.gamePlayerRepository.findOne({
@@ -257,10 +303,27 @@ let GameService = class GameService {
         }
     }
     async resetVotes(gameId) {
-        const game = await this.getGame(gameId);
-        for (const player of game.players) {
-            player.votes_received = 0;
-            await this.gamePlayerRepository.save(player);
+        const queryRunner = this.gamePlayerRepository.manager.connection.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        try {
+            const players = await queryRunner.manager.find(game_player_entity_1.GamePlayer, {
+                where: { game_id: gameId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            for (const player of players) {
+                player.votes_received = 0;
+                player.has_voted = false;
+                await queryRunner.manager.save(player);
+            }
+            await queryRunner.commitTransaction();
+        }
+        catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        }
+        finally {
+            await queryRunner.release();
         }
     }
     async nextPhase(gameId) {

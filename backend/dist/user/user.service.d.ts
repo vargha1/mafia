@@ -12,6 +12,9 @@ export declare class UserService {
         total_games: number;
         wins: number;
         losses: number;
+        failed_login_attempts: number;
+        locked_until: Date;
+        is_active: boolean;
         created_at: Date;
         updated_at: Date;
         game_players: import("../game/entities/game-player.entity").GamePlayer[];
@@ -28,6 +31,9 @@ export declare class UserService {
         total_games: number;
         wins: number;
         losses: number;
+        failed_login_attempts: number;
+        locked_until: Date;
+        is_active: boolean;
         created_at: Date;
         updated_at: Date;
         game_players: import("../game/entities/game-player.entity").GamePlayer[];
