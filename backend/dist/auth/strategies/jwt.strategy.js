@@ -51,7 +51,7 @@ let JwtStrategy = JwtStrategy_1 = class JwtStrategy extends (0, passport_1.Passp
             this.logger.warn(`User not found for token payload: ${payload.sub}`);
             throw new common_1.UnauthorizedException('User not found');
         }
-        if (user.isActive === false) {
+        if (user.is_active === false) {
             this.logger.warn(`Inactive user attempted access: ${user.id}`);
             throw new common_1.UnauthorizedException('Account is deactivated');
         }

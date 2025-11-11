@@ -110,7 +110,7 @@ let GameGateway = GameGateway_1 = class GameGateway {
             if (!user) {
                 throw new common_1.UnauthorizedException('User not found');
             }
-            if (user.isActive === false) {
+            if (user.is_active === false) {
                 throw new common_1.UnauthorizedException('Account is deactivated');
             }
             const existingSocketId = this.userSockets.get(user.id);
