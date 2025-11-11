@@ -84,6 +84,46 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.userSockets.delete(userId);
   }
 
+  // Helper method to validate authentication for WebSocket events
+  private validateAuthentication(client: AuthenticatedSocket): string {
+    if (!client.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    return client.userId;
+  }
+
+  // Helper method to validate user is in game room
+  private validateGameMembership(client: AuthenticatedSocket, gameId: string): void {
+    if (!client.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    if (client.gameId !== gameId) {
+      throw new UnauthorizedException('User is not in the specified game room');
+    }
+  }
+
+  // Helper method to sanitize chat messages
+  private sanitizeMessage(message: string): string {
+    if (!message || typeof message !== 'string') {
+      throw new BadRequestException('Invalid message');
+    }
+
+    if (message.length > 500) {
+      throw new BadRequestException('Message too long (max 500 characters)');
+    }
+
+    // Basic XSS prevention - remove HTML tags and normalize whitespace
+    return message
+      .replace(/<[^>]*>/g, '')
+      .replace(/javascript:/gi, '')
+      .replace(/vbscript:/gi, '')
+      .replace(/onload=/gi, '')
+      .replace(/onerror=/gi, '')
+      .trim()
+      .substring(0, 500);
+  }
+
   @SubscribeMessage('authenticate')
   async handleAuthenticate(
     @ConnectedSocket() client: AuthenticatedSocket,
