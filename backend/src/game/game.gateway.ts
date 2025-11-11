@@ -199,18 +199,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { gameId: string },
+    @MessageBody() data: JoinRoomDto,
   ) {
     try {
       // Validate authentication
       const userId = this.validateAuthentication(client);
 
-      // Validate input
-      if (!data.gameId || typeof data.gameId !== 'string') {
-        throw new BadRequestException('Valid gameId is required');
-      }
-
-      // Join game room
+      // Join game room (input already validated by DTO)
       client.gameId = data.gameId;
       await client.join(data.gameId);
 
