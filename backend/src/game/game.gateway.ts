@@ -44,7 +44,27 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   handleConnection(client: AuthenticatedSocket) {
-    console.log(`Client connected: ${client.id}`);
+    const clientIP = client.handshake.address || 'unknown';
+
+    // Rate limiting - max 10 connections per minute per IP
+    const attempts = this.connectionAttempts.get(clientIP) || 0;
+    if (attempts > 10) {
+      this.logger.warn(`Connection rate limit exceeded for IP: ${clientIP}`);
+      client.disconnect(true);
+      return;
+    }
+
+    this.connectionAttempts.set(clientIP, attempts + 1);
+    setTimeout(() => {
+      const current = this.connectionAttempts.get(clientIP) || 0;
+      if (current <= 1) {
+        this.connectionAttempts.delete(clientIP);
+      } else {
+        this.connectionAttempts.set(clientIP, current - 1);
+      }
+    }, 60000); // 1 minute decay
+
+    this.logger.log(`Client connected: ${client.id} from IP: ${clientIP}`);
   }
 
   async handleDisconnect(client: AuthenticatedSocket) {
