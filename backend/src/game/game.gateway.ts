@@ -448,34 +448,100 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('webrtc-answer')
-  handleWebRTCAnswer(
+  async handleWebRTCAnswer(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { gameId: string; answer: any; targetUserId: string },
   ) {
-    const targetSocket = Array.from(this.connectedUsers.entries())
-      .find(([_, userId]) => userId === data.targetUserId);
-    
-    if (targetSocket) {
-      this.server.to(targetSocket[0]).emit('webrtc-answer', {
+    try {
+      const userId = this.validateAuthentication(client);
+      this.validateGameMembership(client, data.gameId);
+
+      // Validate input
+      if (!data.targetUserId || typeof data.targetUserId !== 'string') {
+        throw new BadRequestException('Valid targetUserId is required');
+      }
+
+      if (!data.answer) {
+        throw new BadRequestException('Answer is required');
+      }
+
+      // Check if target user is in the same game room
+      const targetSocketId = this.userSockets.get(data.targetUserId);
+      if (!targetSocketId) {
+        throw new BadRequestException('Target user not connected');
+      }
+
+      // Verify target user is also in the same game
+      const targetSocket = this.server.sockets.sockets.get(targetSocketId) as AuthenticatedSocket;
+      if (!targetSocket || targetSocket.gameId !== data.gameId) {
+        throw new UnauthorizedException('Target user not in same game room');
+      }
+
+      // Rate limiting for WebRTC events
+      const lastWebrtcEvent = (client as any).lastWebrtcEvent || 0;
+      if (Date.now() - lastWebrtcEvent < 100) {
+        throw new BadRequestException('WebRTC rate limit exceeded');
+      }
+      (client as any).lastWebrtcEvent = Date.now();
+
+      this.server.to(targetSocketId).emit('webrtc-answer', {
         answer: data.answer,
-        fromUserId: client.userId,
+        fromUserId: userId,
       });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.warn(`webrtc-answer error for ${client.id}: ${error.message}`);
+      return { success: false, error: error.message };
     }
   }
 
   @SubscribeMessage('webrtc-ice-candidate')
-  handleWebRTCIceCandidate(
+  async handleWebRTCIceCandidate(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { gameId: string; candidate: any; targetUserId: string },
   ) {
-    const targetSocket = Array.from(this.connectedUsers.entries())
-      .find(([_, userId]) => userId === data.targetUserId);
-    
-    if (targetSocket) {
-      this.server.to(targetSocket[0]).emit('webrtc-ice-candidate', {
+    try {
+      const userId = this.validateAuthentication(client);
+      this.validateGameMembership(client, data.gameId);
+
+      // Validate input
+      if (!data.targetUserId || typeof data.targetUserId !== 'string') {
+        throw new BadRequestException('Valid targetUserId is required');
+      }
+
+      if (!data.candidate) {
+        throw new BadRequestException('Candidate is required');
+      }
+
+      // Check if target user is in the same game room
+      const targetSocketId = this.userSockets.get(data.targetUserId);
+      if (!targetSocketId) {
+        throw new BadRequestException('Target user not connected');
+      }
+
+      // Verify target user is also in the same game
+      const targetSocket = this.server.sockets.sockets.get(targetSocketId) as AuthenticatedSocket;
+      if (!targetSocket || targetSocket.gameId !== data.gameId) {
+        throw new UnauthorizedException('Target user not in same game room');
+      }
+
+      // Rate limiting for WebRTC events (allow higher rate for ICE candidates)
+      const lastWebrtcEvent = (client as any).lastWebrtcEvent || 0;
+      if (Date.now() - lastWebrtcEvent < 50) { // 50ms minimum for ICE candidates
+        throw new BadRequestException('WebRTC rate limit exceeded');
+      }
+      (client as any).lastWebrtcEvent = Date.now();
+
+      this.server.to(targetSocketId).emit('webrtc-ice-candidate', {
         candidate: data.candidate,
-        fromUserId: client.userId,
+        fromUserId: userId,
       });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.warn(`webrtc-ice-candidate error for ${client.id}: ${error.message}`);
+      return { success: false, error: error.message };
     }
   }
 }
