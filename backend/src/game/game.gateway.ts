@@ -142,15 +142,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('authenticate')
   async handleAuthenticate(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { token: string },
+    @MessageBody() data: AuthenticateDto,
   ) {
     try {
-      // Validate input
-      if (!data || !data.token) {
-        throw new BadRequestException('JWT token is required');
-      }
-
-      // Verify JWT token
+      // Verify JWT token (input already validated by DTO)
       const payload = this.jwtService.verify(data.token);
 
       // Validate token structure
