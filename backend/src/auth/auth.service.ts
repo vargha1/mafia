@@ -15,12 +15,25 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
   ) {}
+
+  async onModuleInit() {
+    this.logger.log('AuthService initialized - verifying database connection...');
+    try {
+      // Test if user repository is working
+      await this.userRepository.query('SELECT 1');
+      this.logger.log('AuthService database connection verified');
+    } catch (error) {
+      this.logger.error('AuthService database connection failed:', error);
+    }
+  }
 
   async register(registerDto: RegisterDto) {
     const { username, email, password } = registerDto;
