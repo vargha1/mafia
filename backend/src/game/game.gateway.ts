@@ -397,10 +397,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('nextPhase')
   async handleNextPhase(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { gameId: string },
+    @MessageBody() data: NextPhaseDto,
   ) {
     try {
-      const game = await this.gameService.nextPhase(data.gameId);
+      const userId = this.validateAuthentication(client);
+
+      // Get game details to check authorization
+      const game = await this.gameService.getGame(data.gameId);
+
+      // Authorization: Only game creator can advance phases
+      if (game.created_by !== userId) {
+        throw new UnauthorizedException('Only the game creator can advance game phases');
+      }
+
+      const updatedGame = await this.gameService.nextPhase(data.gameId);
 
       this.server.to(data.gameId).emit('phaseChanged', {
         phase: game.phase,
