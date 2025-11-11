@@ -20,14 +20,21 @@ export enum PlayerRole {
 }
 
 @Entity('game_players')
+@Unique(['game_id', 'user_id']) // Prevent duplicate players in same game
 export class GamePlayer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid')
+  @Column('uuid', {
+    comment: 'Reference to the game'
+  })
+  @Index()
   game_id: string;
 
-  @Column('uuid')
+  @Column('uuid', {
+    comment: 'Reference to the user'
+  })
+  @Index()
   user_id: string;
 
   @ManyToOne(() => Game, (game) => game.players)
