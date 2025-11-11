@@ -85,10 +85,17 @@ export class Game {
   @Column({ type: 'int', default: 1 })
   day_number: number;
 
-  @Column({ nullable: true })
-  winner: string; // 'mafia' or 'citizen'
+  @Column({
+    nullable: true,
+    length: 20,
+    comment: 'Winner of the game: mafia, citizen, or null for ongoing'
+  })
+  winner: string;
 
-  @Column('uuid')
+  @Column('uuid', {
+    comment: 'User ID of the game creator'
+  })
+  @Index()
   created_by: string;
 
   @ManyToOne(() => User)
