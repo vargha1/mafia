@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseConfig = void 0;
+const user_entity_1 = require("../user/entities/user.entity");
+const game_entity_1 = require("../game/entities/game.entity");
+const game_player_entity_1 = require("../game/entities/game-player.entity");
+const game_history_entity_1 = require("../game/entities/game-history.entity");
 exports.databaseConfig = {
     validateConfig() {
         const requiredEnvVars = ['DB_HOST', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE'];
@@ -34,17 +38,7 @@ exports.databaseConfig = {
             ssl: isProduction ? { rejectUnauthorized: false } : false,
             logging: process.env.NODE_ENV === 'development',
             synchronize: process.env.NODE_ENV === 'development',
-            entities: [
-                'dist/**/*.entity{.ts,.js}',
-                'src/**/*.entity{.ts,.js}'
-            ],
-            migrations: [
-                'dist/migrations/*{.ts,.js}',
-                'src/migrations/*{.ts,.js}'
-            ],
-            cli: {
-                migrationsDir: 'src/migrations'
-            },
+            entities: [user_entity_1.User, game_entity_1.Game, game_player_entity_1.GamePlayer, game_history_entity_1.GameHistory],
             pool: {
                 min: parseInt(process.env.DB_MIN_CONNECTIONS || '5'),
                 max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
@@ -54,11 +48,6 @@ exports.databaseConfig = {
                 idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
                 reapIntervalMillis: 1000,
                 createRetryIntervalMillis: 200
-            },
-            extra: {
-                max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
-                connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000'),
-                idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000')
             }
         };
     }
