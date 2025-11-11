@@ -2,9 +2,12 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  InternalServerErrorException,
+  Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '../user/entities/user.entity';
