@@ -44,6 +44,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -52,97 +53,151 @@ const typeorm_2 = require("typeorm");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const user_entity_1 = require("../user/entities/user.entity");
-let AuthService = class AuthService {
+let AuthService = AuthService_1 = class AuthService {
     constructor(userRepository, jwtService) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.logger = new common_1.Logger(AuthService_1.name);
+    }
+    async onModuleInit() {
+        this.logger.log('AuthService initialized - verifying database connection...');
+        try {
+            await this.userRepository.query('SELECT 1');
+            this.logger.log('AuthService database connection verified');
+        }
+        catch (error) {
+            this.logger.error('AuthService database connection failed:', error);
+        }
     }
     async register(registerDto) {
         const { username, email, password } = registerDto;
-        if (!this.validatePasswordComplexity(password)) {
-            throw new common_1.ConflictException('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character');
+        try {
+            if (!this.validatePasswordComplexity(password)) {
+                throw new common_1.ConflictException('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character');
+            }
+            const existingUser = await this.userRepository.findOne({
+                where: [{ username }, { email }],
+            });
+            if (existingUser) {
+                throw new common_1.ConflictException('Username or email already exists');
+            }
+            const hashedPassword = await bcrypt.hash(password, 12);
+            const user = this.userRepository.create({
+                username,
+                email,
+                password: hashedPassword,
+                failed_login_attempts: 0,
+                is_active: true,
+            });
+            await this.userRepository.save(user);
+            const payload = { sub: user.id, username: user.username };
+            const token = this.jwtService.sign(payload);
+            return {
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    level: user.level,
+                    xp: user.xp,
+                },
+                token,
+            };
         }
-        const existingUser = await this.userRepository.findOne({
-            where: [{ username }, { email }],
-        });
-        if (existingUser) {
-            throw new common_1.ConflictException('Username or email already exists');
+        catch (error) {
+            if (error instanceof typeorm_2.QueryFailedError) {
+                const errorMessage = error.message;
+                if (errorMessage.includes('does not exist') || errorMessage.includes('relation')) {
+                    this.logger.error('Database tables do not exist:', error);
+                    throw new common_1.InternalServerErrorException('Database initialization required. Please try again in a moment.');
+                }
+                if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
+                    throw new common_1.ConflictException('Username or email already exists');
+                }
+                if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+                    this.logger.error('Database connection error:', error);
+                    throw new common_1.InternalServerErrorException('Database service temporarily unavailable. Please try again later.');
+                }
+            }
+            if (error instanceof common_1.ConflictException || error instanceof common_1.InternalServerErrorException) {
+                throw error;
+            }
+            this.logger.error('Unexpected error during registration:', error);
+            throw new common_1.InternalServerErrorException('An unexpected error occurred during registration');
         }
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const user = this.userRepository.create({
-            username,
-            email,
-            password: hashedPassword,
-            failed_login_attempts: 0,
-            is_active: true,
-        });
-        await this.userRepository.save(user);
-        const payload = { sub: user.id, username: user.username };
-        const token = this.jwtService.sign(payload);
-        return {
-            user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                level: user.level,
-                xp: user.xp,
-            },
-            token,
-        };
     }
     async login(loginDto) {
         const { username, password } = loginDto;
-        const user = await this.userRepository.findOne({ where: { username } });
-        if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
-        }
-        if (user.locked_until && user.locked_until > new Date()) {
-            const remainingTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
-            throw new common_1.UnauthorizedException(`Account locked. Try again in ${remainingTime} minutes.`);
-        }
-        if (!user.is_active) {
-            throw new common_1.UnauthorizedException('Account is deactivated');
-        }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            const updatedAttempts = (user.failed_login_attempts || 0) + 1;
-            const maxAttempts = 5;
-            if (updatedAttempts >= maxAttempts) {
-                const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-                await this.userRepository.update(user.id, {
-                    failed_login_attempts: updatedAttempts,
-                    locked_until: lockUntil,
-                });
-                throw new common_1.UnauthorizedException(`Too many failed attempts. Account locked for 15 minutes.`);
+        try {
+            const user = await this.userRepository.findOne({ where: { username } });
+            if (!user) {
+                throw new common_1.UnauthorizedException('Invalid credentials');
             }
-            else {
-                await this.userRepository.update(user.id, {
-                    failed_login_attempts: updatedAttempts,
-                });
-                const remainingAttempts = maxAttempts - updatedAttempts;
-                throw new common_1.UnauthorizedException(`Invalid credentials. ${remainingAttempts} attempts remaining.`);
+            if (user.locked_until && user.locked_until > new Date()) {
+                const remainingTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
+                throw new common_1.UnauthorizedException(`Account locked. Try again in ${remainingTime} minutes.`);
             }
+            if (!user.is_active) {
+                throw new common_1.UnauthorizedException('Account is deactivated');
+            }
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+                const updatedAttempts = (user.failed_login_attempts || 0) + 1;
+                const maxAttempts = 5;
+                if (updatedAttempts >= maxAttempts) {
+                    const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+                    await this.userRepository.update(user.id, {
+                        failed_login_attempts: updatedAttempts,
+                        locked_until: lockUntil,
+                    });
+                    throw new common_1.UnauthorizedException(`Too many failed attempts. Account locked for 15 minutes.`);
+                }
+                else {
+                    await this.userRepository.update(user.id, {
+                        failed_login_attempts: updatedAttempts,
+                    });
+                    const remainingAttempts = maxAttempts - updatedAttempts;
+                    throw new common_1.UnauthorizedException(`Invalid credentials. ${remainingAttempts} attempts remaining.`);
+                }
+            }
+            await this.userRepository.update(user.id, {
+                failed_login_attempts: 0,
+                locked_until: null,
+            });
+            const updatedUser = await this.userRepository.findOne({ where: { username } });
+            const payload = { sub: user.id, username: user.username, email: user.email };
+            const token = this.jwtService.sign(payload);
+            return {
+                user: {
+                    id: updatedUser.id,
+                    username: updatedUser.username,
+                    email: updatedUser.email,
+                    level: updatedUser.level,
+                    xp: updatedUser.xp,
+                    total_games: updatedUser.total_games,
+                    wins: updatedUser.wins,
+                    losses: updatedUser.losses,
+                },
+                token,
+            };
         }
-        await this.userRepository.update(user.id, {
-            failed_login_attempts: 0,
-            locked_until: null,
-        });
-        const updatedUser = await this.userRepository.findOne({ where: { username } });
-        const payload = { sub: user.id, username: user.username, email: user.email };
-        const token = this.jwtService.sign(payload);
-        return {
-            user: {
-                id: updatedUser.id,
-                username: updatedUser.username,
-                email: updatedUser.email,
-                level: updatedUser.level,
-                xp: updatedUser.xp,
-                total_games: updatedUser.total_games,
-                wins: updatedUser.wins,
-                losses: updatedUser.losses,
-            },
-            token,
-        };
+        catch (error) {
+            if (error instanceof typeorm_2.QueryFailedError) {
+                const errorMessage = error.message;
+                if (errorMessage.includes('does not exist') || errorMessage.includes('relation')) {
+                    this.logger.error('Database tables do not exist:', error);
+                    throw new common_1.InternalServerErrorException('Database initialization required. Please try again in a moment.');
+                }
+                if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+                    this.logger.error('Database connection error:', error);
+                    throw new common_1.InternalServerErrorException('Database service temporarily unavailable. Please try again later.');
+                }
+            }
+            if (error instanceof common_1.UnauthorizedException || error instanceof common_1.InternalServerErrorException) {
+                throw error;
+            }
+            this.logger.error('Unexpected error during login:', error);
+            throw new common_1.InternalServerErrorException('An unexpected error occurred during login');
+        }
     }
     validatePasswordComplexity(password) {
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -150,7 +205,7 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
