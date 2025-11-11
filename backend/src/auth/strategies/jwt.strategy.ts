@@ -26,12 +26,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    // Check token expiration time
+    const now = Date.now() / 1000;
+    if (payload.exp && payload.exp < now) {
+      this.logger.warn(`Token expired for user ${payload.sub}`);
+      throw new UnauthorizedException('Token has expired');
+    }
+
+    // Validate required payload fields
+    if (!payload.sub || !payload.email) {
+      this.logger.warn('Invalid token payload structure');
+      throw new UnauthorizedException('Invalid token structure');
+    }
+
     const user = await this.userRepository.findOne({
       where: { id: payload.sub },
     });
 
     if (!user) {
-      throw new UnauthorizedException();
+      this.logger.warn(`User not found for token payload: ${payload.sub}`);
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Check if user account is active (assuming there's an isActive field)
+    if (user.isActive === false) {
+      this.logger.warn(`Inactive user attempted access: ${user.id}`);
+      throw new UnauthorizedException('Account is deactivated');
     }
 
     return user;
