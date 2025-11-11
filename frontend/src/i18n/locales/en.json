@@ -97,5 +97,8 @@
   "nextPhase": "Next Phase",
   "connected": "Connected",
   "disconnected": "Disconnected",
-  "voiceChatError": "Failed to connect voice chat"
+  "voiceChatError": "Failed to connect voice chat",
+  "userInfo": "User Information",
+  "progression": "Progression",
+  "statistics": "Statistics"
 }
