@@ -38,6 +38,15 @@ export class User {
   @Column({ default: 0 })
   losses: number;
 
+  @Column({ default: 0 })
+  failed_login_attempts: number;
+
+  @Column({ nullable: true })
+  locked_until: Date;
+
+  @Column({ default: true })
+  is_active: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 
