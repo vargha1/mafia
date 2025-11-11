@@ -398,18 +398,52 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // WebRTC Signaling
   @SubscribeMessage('webrtc-offer')
-  handleWebRTCOffer(
+  async handleWebRTCOffer(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { gameId: string; offer: any; targetUserId: string },
   ) {
-    const targetSocket = Array.from(this.connectedUsers.entries())
-      .find(([_, userId]) => userId === data.targetUserId);
-    
-    if (targetSocket) {
-      this.server.to(targetSocket[0]).emit('webrtc-offer', {
+    try {
+      const userId = this.validateAuthentication(client);
+      this.validateGameMembership(client, data.gameId);
+
+      // Validate input
+      if (!data.targetUserId || typeof data.targetUserId !== 'string') {
+        throw new BadRequestException('Valid targetUserId is required');
+      }
+
+      if (!data.offer) {
+        throw new BadRequestException('Offer is required');
+      }
+
+      // Check if target user is in the same game room
+      const targetSocketId = this.userSockets.get(data.targetUserId);
+      if (!targetSocketId) {
+        throw new BadRequestException('Target user not connected');
+      }
+
+      // Verify target user is also in the same game
+      const targetSocket = this.server.sockets.sockets.get(targetSocketId) as AuthenticatedSocket;
+      if (!targetSocket || targetSocket.gameId !== data.gameId) {
+        throw new UnauthorizedException('Target user not in same game room');
+      }
+
+      // Rate limiting for WebRTC events
+      const webrtcRateLimitKey = `webrtc:${userId}`;
+      const lastWebrtcEvent = (client as any).lastWebrtcEvent || 0;
+      if (Date.now() - lastWebrtcEvent < 100) { // 100ms minimum between WebRTC events
+        throw new BadRequestException('WebRTC rate limit exceeded');
+      }
+      (client as any).lastWebrtcEvent = Date.now();
+
+      this.server.to(targetSocketId).emit('webrtc-offer', {
         offer: data.offer,
-        fromUserId: client.userId,
+        fromUserId: userId,
       });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.warn(`webrtc-offer error for ${client.id}: ${error.message}`);
+      return { success: false, error: error.message };
     }
   }
 
