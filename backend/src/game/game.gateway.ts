@@ -224,17 +224,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { gameId: string },
   ) {
     try {
-      if (client.userId) {
-        await this.gameService.leaveGame(data.gameId, client.userId);
-        client.leave(data.gameId);
-        
-        this.server.to(data.gameId).emit('playerLeft', {
-          userId: client.userId,
-        });
-      }
-      
+      const userId = this.validateAuthentication(client);
+      this.validateGameMembership(client, data.gameId);
+
+      await this.gameService.leaveGame(data.gameId, userId);
+      client.leave(data.gameId);
+      client.gameId = undefined;
+
+      this.server.to(data.gameId).emit('playerLeft', {
+        userId,
+      });
+
       return { success: true };
     } catch (error) {
+      this.logger.warn(`leaveRoom error for ${client.id}: ${error.message}`);
       return { success: false, error: error.message };
     }
   }
@@ -245,15 +248,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { gameId: string },
   ) {
     try {
-      const isReady = await this.gameService.toggleReady(data.gameId, client.userId);
-      
+      const userId = this.validateAuthentication(client);
+      this.validateGameMembership(client, data.gameId);
+
+      const isReady = await this.gameService.toggleReady(data.gameId, userId);
+
       this.server.to(data.gameId).emit('playerReadyChanged', {
-        userId: client.userId,
+        userId,
         isReady,
       });
 
       return { success: true, isReady };
     } catch (error) {
+      this.logger.warn(`toggleReady error for ${client.id}: ${error.message}`);
       return { success: false, error: error.message };
     }
   }
