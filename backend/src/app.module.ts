@@ -6,6 +6,7 @@ import { throttlerConfig } from './config/throttler.config';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { GameModule } from './game/game.module';
+import { SecurityMiddleware, BotDetectionMiddleware, IPValidationMiddleware } from './middleware/security.middleware';
 import { User } from './user/entities/user.entity';
 import { Game } from './game/entities/game.entity';
 import { GamePlayer } from './game/entities/game-player.entity';
