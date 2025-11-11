@@ -16,6 +16,7 @@ import { GameHistory } from './game/entities/game-history.entity';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot(throttlerConfig),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST || 'localhost',
