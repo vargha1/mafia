@@ -300,9 +300,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // Broadcast game started
-      this.server.to(data.gameId).emit('gameStarted', { game });
+      this.server.to(data.gameId).emit('gameStarted', { game: startedGame });
 
-      return { success: true, game };
+      return { success: true, game: startedGame };
     } catch (error) {
       return { success: false, error: error.message };
     }
