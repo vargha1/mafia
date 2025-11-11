@@ -29,13 +29,13 @@ export const databaseConfig = {
     }
   },
 
-  getTypeOrmConfig() {
+  getTypeOrmConfig(): TypeOrmModuleOptions {
     this.validateConfig();
 
     const isProduction = process.env.NODE_ENV === 'production';
 
     return {
-      type: 'postgres',
+      type: 'postgres' as const,
       host: process.env.DB_HOST!,
       port: parseInt(process.env.DB_PORT!) || 5432,
       username: process.env.DB_USERNAME!,
