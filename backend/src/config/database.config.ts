@@ -44,17 +44,7 @@ export const databaseConfig = {
       ssl: isProduction ? { rejectUnauthorized: false } : false,
       logging: process.env.NODE_ENV === 'development',
       synchronize: process.env.NODE_ENV === 'development',
-      entities: [
-        'dist/**/*.entity{.ts,.js}',
-        'src/**/*.entity{.ts,.js}'
-      ],
-      migrations: [
-        'dist/migrations/*{.ts,.js}',
-        'src/migrations/*{.ts,.js}'
-      ],
-      cli: {
-        migrationsDir: 'src/migrations'
-      },
+      entities: [User, Game, GamePlayer, GameHistory],
       pool: {
         min: parseInt(process.env.DB_MIN_CONNECTIONS || '5'),
         max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
@@ -64,11 +54,6 @@ export const databaseConfig = {
         idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
         reapIntervalMillis: 1000,
         createRetryIntervalMillis: 200
-      },
-      extra: {
-        max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
-        connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000'),
-        idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000')
       }
     };
   }
