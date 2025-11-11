@@ -9,7 +9,11 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './services/game.service';
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../user/entities/user.entity';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
