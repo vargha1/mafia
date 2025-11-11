@@ -162,7 +162,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new UnauthorizedException('User not found');
       }
 
-      if (user.isActive === false) {
+      if (user.is_active === false) {
         throw new UnauthorizedException('Account is deactivated');
       }
 
