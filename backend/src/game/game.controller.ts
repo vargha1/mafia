@@ -8,6 +8,7 @@ import {
   Request,
   Delete,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { GameService } from './services/game.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
