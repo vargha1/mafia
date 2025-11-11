@@ -52,6 +52,9 @@ export class GamePlayer {
   @Column({ default: false })
   is_ready: boolean;
 
+  @Column({ default: false })
+  has_voted: boolean;
+
   @CreateDateColumn()
   joined_at: Date;
 }
