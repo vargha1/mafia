@@ -68,29 +68,82 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: AuthenticatedSocket) {
-    console.log(`Client disconnected: ${client.id}`);
-    
+    this.logger.log(`Client disconnected: ${client.id}`);
+
     const userId = this.connectedUsers.get(client.id);
     if (userId && client.gameId) {
       try {
         await this.gameService.leaveGame(client.gameId, userId);
         this.server.to(client.gameId).emit('playerLeft', { userId });
       } catch (error) {
-        console.error('Error handling disconnect:', error);
+        this.logger.error('Error handling disconnect:', error);
       }
     }
-    
+
     this.connectedUsers.delete(client.id);
+    this.userSockets.delete(userId);
   }
 
   @SubscribeMessage('authenticate')
-  handleAuthenticate(
+  async handleAuthenticate(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { userId: string },
+    @MessageBody() data: { token: string },
   ) {
-    client.userId = data.userId;
-    this.connectedUsers.set(client.id, data.userId);
-    console.log(`User authenticated: ${data.userId}`);
+    try {
+      // Validate input
+      if (!data || !data.token) {
+        throw new BadRequestException('JWT token is required');
+      }
+
+      // Verify JWT token
+      const payload = this.jwtService.verify(data.token);
+
+      // Validate token structure
+      if (!payload.sub || !payload.username) {
+        throw new UnauthorizedException('Invalid token structure');
+      }
+
+      // Verify user exists in database
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      if (user.isActive === false) {
+        throw new UnauthorizedException('Account is deactivated');
+      }
+
+      // Check if user is already connected elsewhere
+      const existingSocketId = this.userSockets.get(user.id);
+      if (existingSocketId && existingSocketId !== client.id) {
+        this.logger.warn(`User ${user.id} attempted multiple connections`);
+        throw new UnauthorizedException('User already connected');
+      }
+
+      // Authenticate the socket
+      client.userId = user.id;
+      this.connectedUsers.set(client.id, user.id);
+      this.userSockets.set(user.id, client.id);
+
+      this.logger.log(`User authenticated successfully: ${user.username} (${user.id})`);
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          level: user.level,
+          xp: user.xp
+        }
+      };
+    } catch (error) {
+      this.logger.warn(`Authentication failed: ${error.message}`);
+      client.disconnect(true);
+      throw new UnauthorizedException('Authentication failed');
+    }
   }
 
   @SubscribeMessage('joinRoom')
