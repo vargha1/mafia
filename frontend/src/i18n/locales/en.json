@@ -82,5 +82,20 @@
   "noGamesAvailable": "No games available",
   "loading": "Loading...",
   "error": "Error",
-  "success": "Success"
+  "success": "Success",
+  "status": "Status",
+  "noMessages": "No messages yet",
+  "voteSubmitted": "Your vote has been submitted",
+  "mafiaChooseVictim": "Mafia: Choose your victim",
+  "doctorChooseProtect": "Doctor: Choose someone to protect",
+  "detectiveChooseInvestigate": "Detective: Choose someone to investigate",
+  "nightPhaseWait": "Wait... Mafia is making their choice",
+  "dayPhaseDiscuss": "Discuss and share your suspicions",
+  "votingPhaseInstruction": "Time to vote! Choose the suspicious player",
+  "selectPlayerToVote": "Select a player to vote",
+  "selectTarget": "Select Target",
+  "nextPhase": "Next Phase",
+  "connected": "Connected",
+  "disconnected": "Disconnected",
+  "voiceChatError": "Failed to connect voice chat"
 }
