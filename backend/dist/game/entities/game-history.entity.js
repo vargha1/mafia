@@ -21,11 +21,17 @@ __decorate([
     __metadata("design:type", String)
 ], GameHistory.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('uuid', {
+        comment: 'Reference to the user'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], GameHistory.prototype, "user_id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('uuid', {
+        comment: 'Reference to the game'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], GameHistory.prototype, "game_id", void 0);
 __decorate([

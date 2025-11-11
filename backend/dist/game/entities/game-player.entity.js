@@ -29,11 +29,17 @@ __decorate([
     __metadata("design:type", String)
 ], GamePlayer.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('uuid', {
+        comment: 'Reference to the game'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], GamePlayer.prototype, "game_id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('uuid', {
+        comment: 'Reference to the user'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], GamePlayer.prototype, "user_id", void 0);
 __decorate([
@@ -75,6 +81,7 @@ __decorate([
     __metadata("design:type", Date)
 ], GamePlayer.prototype, "joined_at", void 0);
 exports.GamePlayer = GamePlayer = __decorate([
-    (0, typeorm_1.Entity)('game_players')
+    (0, typeorm_1.Entity)('game_players'),
+    (0, typeorm_1.Unique)(['game_id', 'user_id'])
 ], GamePlayer);
 //# sourceMappingURL=game-player.entity.js.map

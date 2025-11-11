@@ -41,15 +41,27 @@ __decorate([
     __metadata("design:type", String)
 ], Game.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({
+        length: 100,
+        comment: 'Display name for the game room'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], Game.prototype, "room_name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int' }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        comment: 'Maximum number of players allowed',
+        default: 10
+    }),
     __metadata("design:type", Number)
 ], Game.prototype, "max_players", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        default: 0,
+        comment: 'Current number of players in the game'
+    }),
     __metadata("design:type", Number)
 ], Game.prototype, "current_players", void 0);
 __decorate([
@@ -85,11 +97,18 @@ __decorate([
     __metadata("design:type", Number)
 ], Game.prototype, "day_number", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({
+        nullable: true,
+        length: 20,
+        comment: 'Winner of the game: mafia, citizen, or null for ongoing'
+    }),
     __metadata("design:type", String)
 ], Game.prototype, "winner", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('uuid', {
+        comment: 'User ID of the game creator'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], Game.prototype, "created_by", void 0);
 __decorate([

@@ -21,35 +21,68 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)({
+        unique: true,
+        length: 50,
+        comment: 'Unique username for the user'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], User.prototype, "username", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)({
+        unique: true,
+        length: 255,
+        comment: 'Unique email address for the user'
+    }),
+    (0, typeorm_1.Index)(),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({
+        length: 255,
+        comment: 'Hashed password using bcrypt'
+    }),
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 1 }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        default: 1,
+        comment: 'User level based on experience'
+    }),
     __metadata("design:type", Number)
 ], User.prototype, "level", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        default: 0,
+        comment: 'Experience points earned by user'
+    }),
     __metadata("design:type", Number)
 ], User.prototype, "xp", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        default: 0,
+        comment: 'Total games played'
+    }),
     __metadata("design:type", Number)
 ], User.prototype, "total_games", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        default: 0,
+        comment: 'Total games won'
+    }),
     __metadata("design:type", Number)
 ], User.prototype, "wins", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
+    (0, typeorm_1.Column)({
+        type: 'int',
+        default: 0,
+        comment: 'Total games lost'
+    }),
     __metadata("design:type", Number)
 ], User.prototype, "losses", void 0);
 __decorate([

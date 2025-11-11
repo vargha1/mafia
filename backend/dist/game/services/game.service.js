@@ -231,14 +231,6 @@ let GameService = class GameService {
             const updatedTarget = await queryRunner.manager.save(target);
             voter.has_voted = true;
             await queryRunner.manager.save(voter);
-            const voteHistory = queryRunner.manager.create(game_history_entity_1.GameHistory, {
-                user_id: voterId,
-                game_id: gameId,
-                action: 'vote',
-                target_user_id: target.user_id,
-                created_at: new Date(),
-            });
-            await queryRunner.manager.save(voteHistory);
             await queryRunner.commitTransaction();
             return updatedTarget;
         }

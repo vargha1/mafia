@@ -12,14 +12,11 @@ const typeorm_1 = require("@nestjs/typeorm");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
 const throttler_config_1 = require("./config/throttler.config");
+const database_config_1 = require("./config/database.config");
 const auth_module_1 = require("./auth/auth.module");
 const user_module_1 = require("./user/user.module");
 const game_module_1 = require("./game/game.module");
 const security_middleware_1 = require("./middleware/security.middleware");
-const user_entity_1 = require("./user/entities/user.entity");
-const game_entity_1 = require("./game/entities/game.entity");
-const game_player_entity_1 = require("./game/entities/game-player.entity");
-const game_history_entity_1 = require("./game/entities/game-history.entity");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -30,17 +27,7 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
             }),
             throttler_1.ThrottlerModule.forRoot(throttler_config_1.throttlerConfig),
-            typeorm_1.TypeOrmModule.forRoot({
-                type: 'postgres',
-                host: process.env.DB_HOST || 'localhost',
-                port: parseInt(process.env.DB_PORT) || 5432,
-                username: process.env.DB_USERNAME || 'postgres',
-                password: process.env.DB_PASSWORD || 'postgres',
-                database: process.env.DB_DATABASE || 'mafia_game',
-                entities: [user_entity_1.User, game_entity_1.Game, game_player_entity_1.GamePlayer, game_history_entity_1.GameHistory],
-                synchronize: true,
-                logging: false,
-            }),
+            typeorm_1.TypeOrmModule.forRoot(database_config_1.databaseConfig.getTypeOrmConfig()),
             auth_module_1.AuthModule,
             user_module_1.UserModule,
             game_module_1.GameModule,
