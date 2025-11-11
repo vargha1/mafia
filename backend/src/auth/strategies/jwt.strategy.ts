@@ -48,8 +48,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
-    // Check if user account is active (assuming there's an isActive field)
-    if (user.isActive === false) {
+    // Check if user account is active
+    if (user.is_active === false) {
       this.logger.warn(`Inactive user attempted access: ${user.id}`);
       throw new UnauthorizedException('Account is deactivated');
     }
