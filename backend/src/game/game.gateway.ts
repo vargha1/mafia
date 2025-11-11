@@ -298,14 +298,34 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { gameId: string; message: string; username: string },
   ) {
-    this.server.to(data.gameId).emit('newMessage', {
-      userId: client.userId,
-      username: data.username,
-      message: data.message,
-      timestamp: new Date(),
-    });
+    try {
+      const userId = this.validateAuthentication(client);
+      this.validateGameMembership(client, data.gameId);
 
-    return { success: true };
+      // Validate and sanitize message
+      if (!data.message || typeof data.message !== 'string') {
+        throw new BadRequestException('Message is required');
+      }
+
+      if (!data.username || typeof data.username !== 'string') {
+        throw new BadRequestException('Username is required');
+      }
+
+      const sanitizedMessage = this.sanitizeMessage(data.message);
+      const sanitizedUsername = this.sanitizeMessage(data.username).substring(0, 50);
+
+      this.server.to(data.gameId).emit('newMessage', {
+        userId,
+        username: sanitizedUsername,
+        message: sanitizedMessage,
+        timestamp: new Date(),
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.warn(`sendMessage error for ${client.id}: ${error.message}`);
+      return { success: false, error: error.message };
+    }
   }
 
   @SubscribeMessage('vote')
