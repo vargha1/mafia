@@ -1,4 +1,8 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
+import { Game } from '../game/entities/game.entity';
+import { GamePlayer } from '../game/entities/game-player.entity';
+import { GameHistory } from '../game/entities/game-history.entity';
 
 export const databaseConfig = {
   validateConfig(): void {
