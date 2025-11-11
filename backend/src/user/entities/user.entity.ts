@@ -15,28 +15,61 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({
+    unique: true,
+    length: 50,
+    comment: 'Unique username for the user'
+  })
+  @Index()
   username: string;
 
-  @Column({ unique: true })
+  @Column({
+    unique: true,
+    length: 255,
+    comment: 'Unique email address for the user'
+  })
+  @Index()
   email: string;
 
-  @Column()
+  @Column({
+    length: 255,
+    comment: 'Hashed password using bcrypt'
+  })
   password: string;
 
-  @Column({ default: 1 })
+  @Column({
+    type: 'int',
+    default: 1,
+    comment: 'User level based on experience'
+  })
   level: number;
 
-  @Column({ default: 0 })
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Experience points earned by user'
+  })
   xp: number;
 
-  @Column({ default: 0 })
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Total games played'
+  })
   total_games: number;
 
-  @Column({ default: 0 })
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Total games won'
+  })
   wins: number;
 
-  @Column({ default: 0 })
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Total games lost'
+  })
   losses: number;
 
   @Column({ default: 0 })
