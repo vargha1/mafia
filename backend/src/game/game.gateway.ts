@@ -56,6 +56,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private jwtService: JwtService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+  ) {
+    // Enable validation for WebSocket messages
+    this.server.use((socket, next) => {
+      // Global validation pipe for WebSocket events
+      socket.useValidationPipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
+      next();
+    });
+  }
+
+  constructor(
+    private gameService: GameService,
+    private jwtService: JwtService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
   handleConnection(client: AuthenticatedSocket) {
