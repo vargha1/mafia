@@ -15,10 +15,16 @@ export class GameHistory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid')
+  @Column('uuid', {
+    comment: 'Reference to the user'
+  })
+  @Index()
   user_id: string;
 
-  @Column('uuid')
+  @Column('uuid', {
+    comment: 'Reference to the game'
+  })
+  @Index()
   game_id: string;
 
   @ManyToOne(() => User, (user) => user.game_history)
