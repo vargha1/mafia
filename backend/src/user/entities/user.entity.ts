@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { GamePlayer } from '../../game/entities/game-player.entity';
 import { GameHistory } from '../../game/entities/game-history.entity';
