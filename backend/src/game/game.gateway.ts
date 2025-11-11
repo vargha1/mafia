@@ -362,9 +362,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('eliminatePlayer')
   async handleEliminate(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { gameId: string; playerId: string },
+    @MessageBody() data: EliminatePlayerDto,
   ) {
     try {
+      const userId = this.validateAuthentication(client);
+
+      // Get game details to check authorization
+      const game = await this.gameService.getGame(data.gameId);
+
+      // Authorization: Only game creator can eliminate players (admin function)
+      if (game.created_by !== userId) {
+        throw new UnauthorizedException('Only the game creator can eliminate players');
+      }
+
       const result = await this.gameService.eliminatePlayer(data.gameId, data.playerId);
 
       this.server.to(data.gameId).emit('playerEliminated', {
