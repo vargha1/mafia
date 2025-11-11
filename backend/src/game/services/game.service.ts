@@ -222,31 +222,90 @@ export class GameService {
   }
 
   async vote(gameId: string, voterId: string, targetId: string) {
-    const game = await this.getGame(gameId);
+    // Use database transaction for atomic voting operation
+    const queryRunner = this.gamePlayerRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (game.phase !== GamePhase.VOTING) {
-      throw new BadRequestException('Not in voting phase');
+    try {
+      // Lock the game row to prevent concurrent phase changes
+      const game = await queryRunner.manager.findOne(Game, {
+        where: { id: gameId },
+        relations: ['players'],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!game) {
+        await queryRunner.rollbackTransaction();
+        throw new NotFoundException('Game not found');
+      }
+
+      if (game.phase !== GamePhase.VOTING) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException('Not in voting phase');
+      }
+
+      // Lock target player row for atomic vote increment
+      const target = await queryRunner.manager.findOne(GamePlayer, {
+        where: { id: targetId, game_id: gameId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!target) {
+        await queryRunner.rollbackTransaction();
+        throw new NotFoundException('Target player not found');
+      }
+
+      // Verify voter is in game and eligible to vote
+      const voter = game.players.find(p => p.user_id === voterId);
+      if (!voter) {
+        await queryRunner.rollbackTransaction();
+        throw new NotFoundException('Voter not found in game');
+      }
+
+      if (!voter.is_alive) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException('Dead players cannot vote');
+      }
+
+      if (!target.is_alive) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException('Cannot vote for dead player');
+      }
+
+      // Check if voter already voted (optional - depends on game rules)
+      if (voter.has_voted) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException('Player has already voted');
+      }
+
+      // Atomically increment vote count
+      target.votes_received = (target.votes_received || 0) + 1;
+      const updatedTarget = await queryRunner.manager.save(target);
+
+      // Mark voter as having voted
+      voter.has_voted = true;
+      await queryRunner.manager.save(voter);
+
+      // Add audit log entry for the vote
+      const voteHistory = queryRunner.manager.create(GameHistory, {
+        user_id: voterId,
+        game_id: gameId,
+        action: 'vote',
+        target_user_id: target.user_id,
+        created_at: new Date(),
+      });
+      await queryRunner.manager.save(voteHistory);
+
+      await queryRunner.commitTransaction();
+
+      return updatedTarget;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    const voter = game.players.find(p => p.user_id === voterId);
-    const target = game.players.find(p => p.id === targetId);
-
-    if (!voter || !target) {
-      throw new NotFoundException('Player not found');
-    }
-
-    if (!voter.is_alive) {
-      throw new BadRequestException('Dead players cannot vote');
-    }
-
-    if (!target.is_alive) {
-      throw new BadRequestException('Cannot vote for dead player');
-    }
-
-    target.votes_received += 1;
-    await this.gamePlayerRepository.save(target);
-
-    return target;
   }
 
   async eliminatePlayer(gameId: string, playerId: string) {
