@@ -39,15 +39,10 @@ exports.databaseConfig = {
             logging: process.env.NODE_ENV === 'development',
             synchronize: process.env.NODE_ENV === 'development',
             entities: [user_entity_1.User, game_entity_1.Game, game_player_entity_1.GamePlayer, game_history_entity_1.GameHistory],
-            pool: {
-                min: parseInt(process.env.DB_MIN_CONNECTIONS || '5'),
+            extra: {
                 max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
-                acquireTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000'),
-                createTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000'),
-                destroyTimeoutMillis: parseInt(process.env.DB_DESTROY_TIMEOUT || '5000'),
-                idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-                reapIntervalMillis: 1000,
-                createRetryIntervalMillis: 200
+                connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000'),
+                idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000')
             }
         };
     }
