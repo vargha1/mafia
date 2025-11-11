@@ -22,7 +22,7 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
     credentials: true,
   },
   namespace: '/game',
@@ -31,9 +31,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  private readonly logger = new Logger(GameGateway.name);
   private connectedUsers: Map<string, string> = new Map(); // socketId -> userId
+  private userSockets: Map<string, string> = new Map(); // userId -> socketId
+  private connectionAttempts: Map<string, number> = new Map(); // IP -> attempt count
 
-  constructor(private gameService: GameService) {}
+  constructor(
+    private gameService: GameService,
+    private jwtService: JwtService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
   handleConnection(client: AuthenticatedSocket) {
     console.log(`Client connected: ${client.id}`);
