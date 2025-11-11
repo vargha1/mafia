@@ -413,8 +413,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const updatedGame = await this.gameService.nextPhase(data.gameId);
 
       this.server.to(data.gameId).emit('phaseChanged', {
-        phase: game.phase,
-        dayNumber: game.day_number,
+        phase: updatedGame.phase,
+        dayNumber: updatedGame.day_number,
       });
 
       return { success: true, game };
