@@ -37,13 +37,25 @@ export class Game {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({
+    length: 100,
+    comment: 'Display name for the game room'
+  })
+  @Index()
   room_name: string;
 
-  @Column({ type: 'int' })
+  @Column({
+    type: 'int',
+    comment: 'Maximum number of players allowed',
+    default: 10
+  })
   max_players: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Current number of players in the game'
+  })
   current_players: number;
 
   @Column({
