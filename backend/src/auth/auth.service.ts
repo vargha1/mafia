@@ -115,77 +115,103 @@ export class AuthService implements OnModuleInit {
   async login(loginDto: LoginDto) {
     const { username, password } = loginDto;
 
-    // Find user
-    const user = await this.userRepository.findOne({ where: { username } });
+    try {
+      // Find user
+      const user = await this.userRepository.findOne({ where: { username } });
 
-    if (!user) {
-      // Use generic error message to prevent user enumeration
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    // Check if account is locked
-    if (user.locked_until && user.locked_until > new Date()) {
-      const remainingTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
-      throw new UnauthorizedException(`Account locked. Try again in ${remainingTime} minutes.`);
-    }
-
-    // Check if account is active
-    if (!user.is_active) {
-      throw new UnauthorizedException('Account is deactivated');
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      // Increment failed login attempts
-      const updatedAttempts = (user.failed_login_attempts || 0) + 1;
-      const maxAttempts = 5;
-
-      if (updatedAttempts >= maxAttempts) {
-        // Lock account for 15 minutes
-        const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-        await this.userRepository.update(user.id, {
-          failed_login_attempts: updatedAttempts,
-          locked_until: lockUntil,
-        });
-        throw new UnauthorizedException(`Too many failed attempts. Account locked for 15 minutes.`);
-      } else {
-        // Increment failed attempts
-        await this.userRepository.update(user.id, {
-          failed_login_attempts: updatedAttempts,
-        });
-        const remainingAttempts = maxAttempts - updatedAttempts;
-        throw new UnauthorizedException(`Invalid credentials. ${remainingAttempts} attempts remaining.`);
+      if (!user) {
+        // Use generic error message to prevent user enumeration
+        throw new UnauthorizedException('Invalid credentials');
       }
+
+      // Check if account is locked
+      if (user.locked_until && user.locked_until > new Date()) {
+        const remainingTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
+        throw new UnauthorizedException(`Account locked. Try again in ${remainingTime} minutes.`);
+      }
+
+      // Check if account is active
+      if (!user.is_active) {
+        throw new UnauthorizedException('Account is deactivated');
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        // Increment failed login attempts
+        const updatedAttempts = (user.failed_login_attempts || 0) + 1;
+        const maxAttempts = 5;
+
+        if (updatedAttempts >= maxAttempts) {
+          // Lock account for 15 minutes
+          const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+          await this.userRepository.update(user.id, {
+            failed_login_attempts: updatedAttempts,
+            locked_until: lockUntil,
+          });
+          throw new UnauthorizedException(`Too many failed attempts. Account locked for 15 minutes.`);
+        } else {
+          // Increment failed attempts
+          await this.userRepository.update(user.id, {
+            failed_login_attempts: updatedAttempts,
+          });
+          const remainingAttempts = maxAttempts - updatedAttempts;
+          throw new UnauthorizedException(`Invalid credentials. ${remainingAttempts} attempts remaining.`);
+        }
+      }
+
+      // Successful login - reset failed attempts and clear lock
+      await this.userRepository.update(user.id, {
+        failed_login_attempts: 0,
+        locked_until: null,
+      });
+
+      // Reload user to get updated data
+      const updatedUser = await this.userRepository.findOne({ where: { username } });
+
+      // Generate JWT token
+      const payload = { sub: user.id, username: user.username, email: user.email };
+      const token = this.jwtService.sign(payload);
+
+      return {
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          level: updatedUser.level,
+          xp: updatedUser.xp,
+          total_games: updatedUser.total_games,
+          wins: updatedUser.wins,
+          losses: updatedUser.losses,
+        },
+        token,
+      };
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        const errorMessage = (error as any).message;
+
+        // Check for specific database errors
+        if (errorMessage.includes('does not exist') || errorMessage.includes('relation')) {
+          this.logger.error('Database tables do not exist:', error);
+          throw new InternalServerErrorException('Database initialization required. Please try again in a moment.');
+        }
+
+        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+          this.logger.error('Database connection error:', error);
+          throw new InternalServerErrorException('Database service temporarily unavailable. Please try again later.');
+        }
+      }
+
+      // Re-throw known exceptions
+      if (error instanceof UnauthorizedException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
+      // Handle unexpected errors
+      this.logger.error('Unexpected error during login:', error);
+      throw new InternalServerErrorException('An unexpected error occurred during login');
     }
-
-    // Successful login - reset failed attempts and clear lock
-    await this.userRepository.update(user.id, {
-      failed_login_attempts: 0,
-      locked_until: null,
-    });
-
-    // Reload user to get updated data
-    const updatedUser = await this.userRepository.findOne({ where: { username } });
-
-    // Generate JWT token
-    const payload = { sub: user.id, username: user.username, email: user.email };
-    const token = this.jwtService.sign(payload);
-
-    return {
-      user: {
-        id: updatedUser.id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        level: updatedUser.level,
-        xp: updatedUser.xp,
-        total_games: updatedUser.total_games,
-        wins: updatedUser.wins,
-        losses: updatedUser.losses,
-      },
-      token,
-    };
   }
 
   private validatePasswordComplexity(password: string): boolean {
