@@ -6,6 +6,7 @@ import {
   OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
+  ValidationPipe,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './services/game.service';
@@ -14,6 +15,20 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
+import {
+  AuthenticateDto,
+  JoinRoomDto,
+  LeaveRoomDto,
+  ToggleReadyDto,
+  StartGameDto,
+  SendMessageDto,
+  VoteDto,
+  EliminatePlayerDto,
+  NextPhaseDto,
+  WebRTCOfferDto,
+  WebRTCAnswerDto,
+  WebRTCIceCandidateDto,
+} from './dto/websocket.dto';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
