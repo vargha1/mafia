@@ -1,3 +1,5 @@
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+
 export const databaseConfig = {
   validateConfig(): void {
     const requiredEnvVars = ['DB_HOST', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE'];
