@@ -33,5 +33,10 @@ import { GameHistory } from './game/entities/game-history.entity';
     UserModule,
     GameModule,
   ],
+  providers: [
+    SecurityMiddleware,
+    BotDetectionMiddleware,
+    IPValidationMiddleware,
+  ],
 })
 export class AppModule {}
