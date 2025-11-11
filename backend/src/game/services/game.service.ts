@@ -380,11 +380,31 @@ export class GameService {
   }
 
   async resetVotes(gameId: string) {
-    const game = await this.getGame(gameId);
-    
-    for (const player of game.players) {
-      player.votes_received = 0;
-      await this.gamePlayerRepository.save(player);
+    // Use transaction for atomic vote reset
+    const queryRunner = this.gamePlayerRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Lock all players in the game
+      const players = await queryRunner.manager.find(GamePlayer, {
+        where: { game_id: gameId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      // Reset all votes atomically
+      for (const player of players) {
+        player.votes_received = 0;
+        player.has_voted = false;
+        await queryRunner.manager.save(player);
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 
