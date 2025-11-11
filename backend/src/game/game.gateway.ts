@@ -6,8 +6,8 @@ import {
   OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
-  ValidationPipe,
 } from '@nestjs/websockets';
+import { ValidationPipe } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './services/game.service';
 import { UseGuards, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
