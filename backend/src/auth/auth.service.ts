@@ -22,6 +22,11 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { username, email, password } = registerDto;
 
+    // Password complexity validation
+    if (!this.validatePasswordComplexity(password)) {
+      throw new ConflictException('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character');
+    }
+
     // Check if user already exists
     const existingUser = await this.userRepository.findOne({
       where: [{ username }, { email }],
@@ -32,13 +37,15 @@ export class AuthService {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     const user = this.userRepository.create({
       username,
       email,
       password: hashedPassword,
+      failed_login_attempts: 0,
+      is_active: true,
     });
 
     await this.userRepository.save(user);
