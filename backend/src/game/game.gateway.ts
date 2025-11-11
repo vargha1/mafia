@@ -192,18 +192,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { gameId: string },
   ) {
     try {
+      // Validate authentication
+      const userId = this.validateAuthentication(client);
+
+      // Validate input
+      if (!data.gameId || typeof data.gameId !== 'string') {
+        throw new BadRequestException('Valid gameId is required');
+      }
+
+      // Join game room
       client.gameId = data.gameId;
       await client.join(data.gameId);
-      
+
       const game = await this.gameService.getGame(data.gameId);
-      
+
       this.server.to(data.gameId).emit('playerJoined', {
         game,
-        userId: client.userId,
+        userId,
       });
 
       return { success: true, game };
     } catch (error) {
+      this.logger.warn(`joinRoom error for ${client.id}: ${error.message}`);
       return { success: false, error: error.message };
     }
   }
