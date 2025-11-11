@@ -287,10 +287,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const startedGame = await this.gameService.startGame(data.gameId);
-      
+
       // Send role to each player privately
-      for (const player of game.players) {
-        const role = await this.gameService.getPlayerRole(game.id, player.user_id);
+      for (const player of startedGame.players) {
+        const role = await this.gameService.getPlayerRole(startedGame.id, player.user_id);
         const playerSocket = Array.from(this.connectedUsers.entries())
           .find(([_, userId]) => userId === player.user_id);
         
