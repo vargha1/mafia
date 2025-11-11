@@ -273,10 +273,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('startGame')
   async handleStartGame(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { gameId: string },
+    @MessageBody() data: StartGameDto,
   ) {
     try {
-      const game = await this.gameService.startGame(data.gameId);
+      const userId = this.validateAuthentication(client);
+
+      // Get game details to check authorization
+      const game = await this.gameService.getGame(data.gameId);
+
+      // Authorization: Only game creator can start the game
+      if (game.created_by !== userId) {
+        throw new UnauthorizedException('Only the game creator can start the game');
+      }
+
+      const startedGame = await this.gameService.startGame(data.gameId);
       
       // Send role to each player privately
       for (const player of game.players) {
