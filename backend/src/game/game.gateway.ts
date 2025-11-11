@@ -417,7 +417,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         dayNumber: updatedGame.day_number,
       });
 
-      return { success: true, game };
+      return { success: true, game: updatedGame };
     } catch (error) {
       return { success: false, error: error.message };
     }
