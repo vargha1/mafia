@@ -5,6 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  Index,
+  Unique,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Game } from './game.entity';
