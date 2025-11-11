@@ -11,15 +11,30 @@ async function bootstrap() {
     cors: true,
   });
 
+  // Apply security middleware first
+  const securityMiddleware = app.get(SecurityMiddleware);
+  const botDetectionMiddleware = app.get(BotDetectionMiddleware);
+  const ipValidationMiddleware = app.get(IPValidationMiddleware);
+
+  app.use(securityMiddleware.use.bind(securityMiddleware));
+  app.use(botDetectionMiddleware.use.bind(botDetectionMiddleware));
+  app.use(ipValidationMiddleware.use.bind(ipValidationMiddleware));
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 
