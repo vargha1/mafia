@@ -97,5 +97,8 @@
   "nextPhase": "مرحله بعدی",
   "connected": "متصل",
   "disconnected": "قطع شده",
-  "voiceChatError": "خطا در برقراری ارتباط صوتی"
+  "voiceChatError": "خطا در برقراری ارتباط صوتی",
+  "userInfo": "اطلاعات کاربر",
+  "progression": "پیشرفت",
+  "statistics": "آمار"
 }
